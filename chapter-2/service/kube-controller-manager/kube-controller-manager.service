@@ -1,0 +1,33 @@
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://kubernetes.io/docs/
+
+[Service]
+EnvironmentFile=-/etc/kubernetes/config
+ExecStart=/usr/local/bin/kube-controller-manager \
+      --logtostderr=true \
+      --v=0 \
+      --master=https://127.0.0.1:6443 \
+	  --bind-address=127.0.0.1 \
+      --root-ca-file=/etc/kubernetes/ssl/ca.pem \
+      --cluster-signing-cert-file=/etc/kubernetes/ssl/ca.pem \
+      --cluster-signing-key-file=/etc/kubernetes/ssl/ca-key.pem \
+      --service-account-private-key-file=/etc/kubernetes/ssl/sa.key \
+      --kubeconfig=/etc/kubernetes/controller-manager.kubeconfig \
+      --leader-elect=true \
+      --use-service-account-credentials=true \
+      --node-monitor-grace-period=40s \
+      --node-monitor-period=5s \
+      --pod-eviction-timeout=2m0s \
+      --controllers=*,bootstrapsigner,tokencleaner \
+      --allocate-node-cidrs=true \
+      --service-cluster-ip-range=10.96.0.0/12 \
+      --cluster-cidr=10.254.0.0/16 \
+      --node-cidr-mask-size-ipv4=24 \
+      --requestheader-client-ca-file=/etc/kubernetes/ssl/front-proxy-ca.pem
+
+Restart=on-failure
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

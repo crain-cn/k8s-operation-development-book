@@ -1,0 +1,48 @@
+[Unit]
+Description=Kubernetes API Service
+Documentation=https://kubernetes.io/docs/
+After=network.target
+After=etcd.service
+
+[Service]
+EnvironmentFile=-/etc/kubernetes/apiserver
+ExecStart=/usr/local/bin/kube-apiserver \
+        $KUBE_LOGTOSTDERR \
+        $KUBE_LOG_LEVEL \
+        $KUBE_ETCD_SERVERS \
+        $KUBE_API_ADDRESS \
+        $KUBE_API_PORT \
+        $KUBELET_PORT \
+        $KUBE_ALLOW_PRIV \
+        $KUBE_SERVICE_ADDRESSES \
+      --etcd-cafile=/etc/kubernetes/ssl/etcd/etcd-ca.pem  \
+      --etcd-certfile=/etc/kubernetes/ssl/etcd/etcd.pem  \
+      --etcd-keyfile=/etc/kubernetes/ssl/etcd/etcd-key.pem  \
+      --client-ca-file=/etc/kubernetes/ssl/ca.pem  \
+      --tls-cert-file=/etc/kubernetes/ssl/apiserver.pem  \
+      --tls-private-key-file=/etc/kubernetes/ssl/apiserver-key.pem  \
+      --kubelet-client-certificate=/etc/kubernetes/ssl/apiserver.pem  \
+      --kubelet-client-key=/etc/kubernetes/ssl/apiserver-key.pem  \
+      --service-account-key-file=/etc/kubernetes/ssl/sa.pub  \
+      --service-account-signing-key-file=/etc/kubernetes/ssl/sa.key  \
+      --service-account-issuer=https://kubernetes.default.svc.cluster.local \
+      --requestheader-client-ca-file=/etc/kubernetes/ssl/front-proxy-ca.pem  \
+      --proxy-client-cert-file=/etc/kubernetes/ssl/front-proxy-client.pem  \
+      --proxy-client-key-file=/etc/kubernetes/ssl/front-proxy-client-key.pem  \
+--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname  \
+      --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,ResourceQuota  \
+      --authorization-mode=Node,RBAC  \
+      --enable-bootstrap-token-auth=true  \
+      --requestheader-allowed-names=aggregator  \
+      --requestheader-group-headers=X-Remote-Group  \
+      --requestheader-extra-headers-prefix=X-Remote-Extra-  \
+      --requestheader-username-headers=X-Remote-User \
+      --enable-aggregator-routing=true \
+--token-auth-file=/etc/kubernetes/token.csv
+
+Restart=on-failure
+Type=notify
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

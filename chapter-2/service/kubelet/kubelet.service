@@ -1,0 +1,27 @@
+[Unit]
+Description=Kubernetes Kubelet Server
+Documentation=https://kubernetes.io/docs/
+After=containerd.service
+Requires=kubelet.service
+
+[Service]
+WorkingDirectory=/var/lib/kubelet
+ExecStart=/usr/local/bin/kubelet \
+    --address=0.0.0.0 \
+    --v=2 \
+    --logtostderr=true \
+    --pod-infra-container-image=k8s.gcr.io/pause:3.2 \
+	--container-runtime-endpoint=unix:///run/containerd/containerd.sock \
+	--cgroup-driver=systemd \
+	--cluster-dns=10.254.0.2 \
+	--bootstrap-kubeconfig=/etc/kubernetes/bootstrap.kubeconfig \
+	--kubeconfig=/etc/kubernetes/kubelet.kubeconfig \
+	--cert-dir=/etc/kubernetes/ssl \
+	--cluster-domain=cluster.local \
+	--hairpin-mode=promiscuous-bridge \
+	--serialize-image-pulls=false
+
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
