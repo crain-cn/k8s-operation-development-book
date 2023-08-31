@@ -1,0 +1,45 @@
+apiVersion: pingcap.com/v1alpha1
+kind: TidbCluster
+metadata:
+  name: cluster01
+  namespace: tidb-cluster
+spec:
+  version: "v6.5.0"
+  timezone: UTC
+  configUpdateStrategy: RollingUpdate
+  helper:
+    image: alpine:3.16.0
+  pvReclaimPolicy: Retain
+  enableDynamicConfiguration: true
+  pd: #pd配置
+    baseImage: pingcap/pd
+    config: |
+      [dashboard]
+        internal-proxy = true
+    replicas: 3
+    maxFailoverCount: 0
+    requests:
+      storage: 10Gi
+    mountClusterClientSecret: true
+    storageClassName: shared-ssd-storage #设置storageClass
+  tidb: #tidb配置
+    baseImage: pingcap/tidb
+    config: |
+      [performance]
+        tcp-keep-alive = true
+    replicas: 3
+    maxFailoverCount: 0
+    service:
+      type: NodePort
+      externalTrafficPolicy: Local
+    storageClassName: backup-storage  #设置storageClass
+  tikv: #tikv配置
+    baseImage: pingcap/tikv
+    config: |
+      log-level = "info"
+    replicas: 3
+    maxFailoverCount: 0
+    requests:
+      storage: 100Gi
+    mountClusterClientSecret: true
+    storageClassName: ssd-storage     #设置storageClass

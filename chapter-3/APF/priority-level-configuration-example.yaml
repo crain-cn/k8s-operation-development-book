@@ -1,0 +1,14 @@
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
+kind: PriorityLevelConfiguration
+metadata:
+  name: leader-election
+spec:
+  limited:                         # 限制策略
+    assuredConcurrencyShares: 10
+    limitResponse:                 # 如何处理被限制的请求
+      queuing:                     # 类型为Queue时，列队的设置
+        handSize: 4                # 队列
+        queueLengthLimit: 50       # 队列长度
+        queues: 16                 # 队列数
+      type: Queue                  # Queue或者Reject，Reject直接返回429，Queue将请求加入队列
+  type: Limited                    # 类型，Limited或Exempt， Exempt即不限制

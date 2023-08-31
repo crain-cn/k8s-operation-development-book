@@ -1,0 +1,15 @@
+apiVersion: pingcap.com/v1alpha1
+kind: TidbInitializer
+metadata:
+  name: demo-init
+  namespace: tidb-cluster
+spec:
+  image: tnir/mysqlclient
+  # imagePullPolicy: IfNotPresent
+  cluster:
+    namespace: tidb-cluster
+    name: cluster01
+  initSql: |-
+    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';
+    FLUSH PRIVILEGES;
+  passwordSecret: tidb-secret

@@ -1,0 +1,20 @@
+apiVersion: flowcontrol.apiserver.k8s.io/v1beta2
+kind: FlowSchema
+metadata:
+  name: flowschemas-example
+spec:
+  matchingPrecedence: 1000    # 匹配优先级，1~1000，越小优先级越高
+  priorityLevelConfiguration: # 关联的PriorityLevelConfigurations
+    name: exempt
+  rules:                      # 请求规则，过滤rules，即不限制当前flowshema的rules
+    - nonResourceRules:       # 非资源
+        - nonResourceURLs:
+            - '/healthz'
+            - '/livez'
+            - '/readyz'
+          verbs:
+            - '*'
+      subjects:               # 对应的用户或用户组
+        - kind: Group
+          group:
+            name: system:unauthenticated
