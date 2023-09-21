@@ -1,0 +1,6 @@
+apiVersion: example.zhihu.com/v1
+kind: Test
+metadata:
+  name: test-name
+spec:
+  message: test

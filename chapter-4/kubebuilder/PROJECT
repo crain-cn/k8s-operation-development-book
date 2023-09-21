@@ -1,0 +1,16 @@
+domain: app.zhihu.com
+layout:
+- go.kubebuilder.io/v3
+projectName: kubebuilder
+repo: kubebuilder
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: app.zhihu.com
+  group: apps
+  kind: ZhApp
+  path: kubebuilder/api/v1
+  version: v1
+version: "3"

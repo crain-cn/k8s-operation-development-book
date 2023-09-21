@@ -1,0 +1,8 @@
+apiVersion: apps.app.zhihu.com/v1
+kind: ZhApp
+metadata:
+  name: zhapp-sample
+  namespace: default
+spec:
+  replicas: 1
+  image: "nginx:1.7.9"

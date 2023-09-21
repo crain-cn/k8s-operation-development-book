@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - apps.app.zhihu.com
+  resources:
+  - zhapps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.app.zhihu.com
+  resources:
+  - zhapps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apps.app.zhihu.com
+  resources:
+  - zhapps/status
+  verbs:
+  - get
+  - patch
+  - update

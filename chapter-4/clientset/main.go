@@ -25,6 +25,6 @@ func main() {
 
 	// 遍历DaemonSet
 	for _, item := range dslist.Items {
-		fmt.Printf("DaemonSet =>  %s, namespace => %s", item.Name, item.Namespace)
+		fmt.Printf("DaemonSet =>  %s, namespace => %s \n\r", item.Name, item.Namespace)
 	}
 }

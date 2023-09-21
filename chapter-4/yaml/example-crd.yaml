@@ -1,0 +1,41 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  # name 必须匹配下面的spec字段：<plural>.<group>
+  name: test.example.zhihu.com
+spec:
+  # group 名用于 REST API 中的定义：/apis/<group>/<version>
+  group: example.zhihu.com
+  # 访问名称
+  names:
+    # kind 是 sigular 的一个驼峰形式定义，在资源清单中会使用
+    kind: Test
+    # plural 名字用于 REST API 中的定义：/apis/<group>/<version>/<plural>
+    plural: test
+    # shortNames 相当于缩写形式
+    shortNames:
+      - ts
+    # singular 名称用于 CLI 操作或显示的一个别名
+    singular: tests
+  # 定义作用范围：Namespaced（命名空间级别）或者 Cluster（整个集群）
+  scope: Namespaced
+  # 列出自定义资源的所有 API 版本
+  versions:
+    - name: v1 # 版本名称，比如 v1、v2beta1 等等
+      schema:
+        openAPIV3Schema:
+          description: Define CronTab YAML Spec
+          properties:
+            spec:
+              # 自定义字段内容
+              properties:
+                message:
+                  type: string
+              required:
+                - message
+              type: object
+          type: object
+      # 是否开启通过 REST APIs 访问 `/apis/<group>/<version>/...`
+      served: true
+      # 必须将一个且只有一个版本标记为存储版本
+      storage: true
