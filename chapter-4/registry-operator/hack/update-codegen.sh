@@ -22,7 +22,11 @@ trap EXIT SIGINT SIGTERM
 # 创建临时目录
 GENERATED_TMP_DIR=$(mktemp -d)
 
-mkdir -p "${APIS_PACKAGE}/${GROUP}" && cp -r "${APIS_PACKAGE}/${VERSION}" "${APIS_PACKAGE}/${GROUP}"
+# 判断目录是否存在，并删除原本目录
+if [ --e ${APIS_PACKAGE}/${VERSION} ]; then
+    mkdir -p "${APIS_PACKAGE}/${GROUP}" && cp -r "${APIS_PACKAGE}/${VERSION}" "${APIS_PACKAGE}/${GROUP}"
+    rm -rf ${APIS_PACKAGE}/${VERSION}
+fi
 
 chmod +x ${CODEGEN_PKG}/generate-groups.sh
 

@@ -17,10 +17,11 @@ limitations under the License.
 package v1
 
 import (
-"fmt"
-"testing"
+	"fmt"
+	"testing"
 )
 
 func TestFunc(t *testing.T) {
 	// 打印
 	fmt.Println("this is test function......")
+}

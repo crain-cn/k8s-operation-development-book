@@ -1,0 +1,26 @@
+{
+  "CN": "webhook",
+  "hosts": [
+    "webhook.default.svc",
+    "127.0.0.1",
+    "10.19.232.131",
+    "localhost",
+    "kubernetes",
+    "kubernetes.default",
+    "kubernetes.default.svc",
+    "kubernetes.default.svc.cluster",
+    "kubernetes.default.svc.cluster.local"
+  ],
+
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [{
+    "C": "CN",
+    "ST": "Beijing",
+    "L": "Beijing",
+    "O": "Kubernetes",
+    "OU": "Kubernetes-manual"
+  }]
+}

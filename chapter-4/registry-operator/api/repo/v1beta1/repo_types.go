@@ -28,7 +28,7 @@ type RepoSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Source 		string `json:"source,omitempty"`	       //源地址
+	Source string `json:"source,omitempty"` //源地址
 
 	Destination string `json:"destination,omitempty"` //修改的目标地址
 }

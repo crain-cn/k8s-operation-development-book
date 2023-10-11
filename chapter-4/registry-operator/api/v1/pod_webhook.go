@@ -47,7 +47,7 @@ func (a *PodWebhookMutate) Handle(ctx context.Context, req admission.Request) ad
 	}
 
 	// 获得CRD资源列表
-	list , err := a.ClientSet.RepoV1beta1().Repos().List(context.TODO() ,v1.ListOptions{})
+	list, err := a.ClientSet.RepoV1beta1().Repos().List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}

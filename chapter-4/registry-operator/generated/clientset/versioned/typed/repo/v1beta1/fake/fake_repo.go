@@ -32,7 +32,6 @@ import (
 // FakeRepos implements RepoInterface
 type FakeRepos struct {
 	Fake *FakeRepoV1beta1
-	ns   string
 }
 
 var reposResource = schema.GroupVersionResource{Group: "repo.setting.zhihu.com", Version: "v1beta1", Resource: "repos"}
@@ -42,7 +41,7 @@ var reposKind = schema.GroupVersionKind{Group: "repo.setting.zhihu.com", Version
 // Get takes name of the repo, and returns the corresponding repo object, and an error if there is any.
 func (c *FakeRepos) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(reposResource, c.ns, name), &v1beta1.Repo{})
+		Invokes(testing.NewGetAction(reposResource, "", name), &v1beta1.Repo{})
 
 	if obj == nil {
 		return nil, err
@@ -53,7 +52,7 @@ func (c *FakeRepos) Get(ctx context.Context, name string, options v1.GetOptions)
 // List takes label and field selectors, and returns the list of Repos that match those selectors.
 func (c *FakeRepos) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.RepoList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(reposResource, reposKind, c.ns, opts), &v1beta1.RepoList{})
+		Invokes(testing.NewListAction(reposResource, reposKind, "", opts), &v1beta1.RepoList{})
 
 	if obj == nil {
 		return nil, err
@@ -75,14 +74,14 @@ func (c *FakeRepos) List(ctx context.Context, opts v1.ListOptions) (result *v1be
 // Watch returns a watch.Interface that watches the requested repos.
 func (c *FakeRepos) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(reposResource, c.ns, opts))
+		InvokesWatch(testing.NewWatchAction(reposResource, "", opts))
 
 }
 
 // Create takes the representation of a repo and creates it.  Returns the server's representation of the repo, and an error, if there is any.
 func (c *FakeRepos) Create(ctx context.Context, repo *v1beta1.Repo, opts v1.CreateOptions) (result *v1beta1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(reposResource, c.ns, repo), &v1beta1.Repo{})
+		Invokes(testing.NewCreateAction(reposResource, "", repo), &v1beta1.Repo{})
 
 	if obj == nil {
 		return nil, err
@@ -93,7 +92,7 @@ func (c *FakeRepos) Create(ctx context.Context, repo *v1beta1.Repo, opts v1.Crea
 // Update takes the representation of a repo and updates it. Returns the server's representation of the repo, and an error, if there is any.
 func (c *FakeRepos) Update(ctx context.Context, repo *v1beta1.Repo, opts v1.UpdateOptions) (result *v1beta1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(reposResource, c.ns, repo), &v1beta1.Repo{})
+		Invokes(testing.NewUpdateAction(reposResource, "", repo), &v1beta1.Repo{})
 
 	if obj == nil {
 		return nil, err
@@ -105,7 +104,7 @@ func (c *FakeRepos) Update(ctx context.Context, repo *v1beta1.Repo, opts v1.Upda
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeRepos) UpdateStatus(ctx context.Context, repo *v1beta1.Repo, opts v1.UpdateOptions) (*v1beta1.Repo, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(reposResource, "status", c.ns, repo), &v1beta1.Repo{})
+		Invokes(testing.NewUpdateSubresourceAction(reposResource, "status", "", repo), &v1beta1.Repo{})
 
 	if obj == nil {
 		return nil, err
@@ -116,14 +115,14 @@ func (c *FakeRepos) UpdateStatus(ctx context.Context, repo *v1beta1.Repo, opts v
 // Delete takes name of the repo and deletes it. Returns an error if one occurs.
 func (c *FakeRepos) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(reposResource, c.ns, name, opts), &v1beta1.Repo{})
+		Invokes(testing.NewDeleteActionWithOptions(reposResource, "", name, opts), &v1beta1.Repo{})
 
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeRepos) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(reposResource, c.ns, listOpts)
+	action := testing.NewDeleteCollectionAction(reposResource, "", listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1beta1.RepoList{})
 	return err
@@ -132,7 +131,7 @@ func (c *FakeRepos) DeleteCollection(ctx context.Context, opts v1.DeleteOptions,
 // Patch applies the patch and returns the patched repo.
 func (c *FakeRepos) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Repo, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(reposResource, c.ns, name, pt, data, subresources...), &v1beta1.Repo{})
+		Invokes(testing.NewPatchSubresourceAction(reposResource, "", name, pt, data, subresources...), &v1beta1.Repo{})
 
 	if obj == nil {
 		return nil, err

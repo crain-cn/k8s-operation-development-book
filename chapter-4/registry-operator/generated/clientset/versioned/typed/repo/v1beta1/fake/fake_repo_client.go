@@ -27,8 +27,8 @@ type FakeRepoV1beta1 struct {
 	*testing.Fake
 }
 
-func (c *FakeRepoV1beta1) Repos(namespace string) v1beta1.RepoInterface {
-	return &FakeRepos{c, namespace}
+func (c *FakeRepoV1beta1) Repos() v1beta1.RepoInterface {
+	return &FakeRepos{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

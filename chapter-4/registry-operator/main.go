@@ -33,8 +33,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	repov1beta1 "setting.zhihu.com/api/repo/v1beta1"
 	"setting.zhihu.com/api/v1"
-	repov1beta1 "setting.zhihu.com/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -85,6 +85,7 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		CertDir: "./cert/",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -97,7 +98,7 @@ func main() {
 	//}
 
 	// 增加webhook注册
-	clientset  := versioned.NewForConfigOrDie(ctrl.GetConfigOrDie())
+	clientset := versioned.NewForConfigOrDie(ctrl.GetConfigOrDie())
 	mgr.GetWebhookServer().Register("/mutate-core-v1-pod", &webhook.Admission{Handler: &v1.PodWebhookMutate{ClientSet: clientset}})
 
 	//+kubebuilder:scaffold:builder

@@ -31,7 +31,7 @@ type RepoLister interface {
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Repo, err error)
 	// Repos returns an object that can list and get Repos.
-	Repos(namespace string) RepoNamespaceLister
+	Repos() RepoNamespaceLister
 	RepoListerExpansion
 }
 
@@ -54,8 +54,8 @@ func (s *repoLister) List(selector labels.Selector) (ret []*v1beta1.Repo, err er
 }
 
 // Repos returns an object that can list and get Repos.
-func (s *repoLister) Repos(namespace string) RepoNamespaceLister {
-	return repoNamespaceLister{indexer: s.indexer, namespace: namespace}
+func (s *repoLister) Repos() RepoNamespaceLister {
+	return repoNamespaceLister{indexer: s.indexer}
 }
 
 // RepoNamespaceLister helps list and get Repos.
