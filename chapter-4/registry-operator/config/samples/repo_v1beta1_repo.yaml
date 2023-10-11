@@ -1,0 +1,12 @@
+apiVersion: repo.setting.zhihu.com/v1beta1
+kind: Repo
+metadata:
+  labels:
+    app.kubernetes.io/name: repo
+    app.kubernetes.io/instance: repo-sample
+    app.kubernetes.io/part-of: registry-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: registry-operator
+  name: repo-sample
+spec:
+
