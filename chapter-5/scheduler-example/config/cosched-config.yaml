@@ -1,0 +1,14 @@
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+leaderElection:
+  leaderElect: true
+  resourceNamespace: kube-system   # 如果部署到其他namespace可以设定
+  resourceName: cosched-scheduler  # 需要自己的resourceName不能和kube-scheduler重复
+clientConnection:
+  kubeconfig: "/Users/zhaoyu/.kube/config"
+profiles:
+  - schedulerName: colo-scheduler
+    plugins:
+      score:
+        enabled:
+          - name: cosched
