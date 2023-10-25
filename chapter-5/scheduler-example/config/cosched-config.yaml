@@ -5,10 +5,10 @@ leaderElection:
   resourceNamespace: kube-system   # 如果部署到其他namespace可以设定
   resourceName: cosched-scheduler  # 需要自己的resourceName不能和kube-scheduler重复
 clientConnection:
-  kubeconfig: "/Users/zhaoyu/.kube/config"
+  kubeconfig: "/Users/zhaoyu/.kube/config" # 密钥用于本机调试使用
 profiles:
-  - schedulerName: colo-scheduler
+  - schedulerName: cosched-scheduler # 调度器名称
     plugins:
-      score:
+      score:                         # 打分插件
         enabled:
-          - name: cosched
+          - name: cosched            # 开启自己写的插件

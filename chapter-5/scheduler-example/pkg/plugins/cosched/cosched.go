@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	Name = "cosched"
+	Name = "cosched" //插件名称
 )
 
 var (
-	_ framework.ScorePlugin = &Plugin{}
+	_ framework.ScorePlugin = &Plugin{} // 映射ScorePlugin到Plugin结构
 )
 
 type Plugin struct {
@@ -22,7 +22,6 @@ type Plugin struct {
 }
 
 func New(args runtime.Object, handle framework.Handle) (framework.Plugin, error) {
-
 	klog.InfoS("cosched plugin init")
 
 	return &Plugin{
@@ -32,11 +31,12 @@ func New(args runtime.Object, handle framework.Handle) (framework.Plugin, error)
 
 func (p *Plugin) Name() string { return Name }
 
-
+// 打分扩展函数
 func (p *Plugin) ScoreExtensions() framework.ScoreExtensions {
 	return nil
 }
 
+// 打分函数
 func (p *Plugin) Score(ctx context.Context, state *framework.CycleState, pod *corev1.Pod, nodeName string) (int64, *framework.Status) {
 
 	nodeInfo, err := p.handle.SnapshotSharedLister().NodeInfos().Get(nodeName)
@@ -48,6 +48,7 @@ func (p *Plugin) Score(ctx context.Context, state *framework.CycleState, pod *co
 		return 0, framework.NewStatus(framework.Error, "node not found")
 	}
 
+	// 判断有cosched=on标签的节点给100分
 	if node.Labels["cosched"] == "on" {
 		return 100, nil
 	}

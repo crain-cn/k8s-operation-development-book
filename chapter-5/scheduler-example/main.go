@@ -15,7 +15,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	command := app.NewSchedulerCommand(
-		app.WithPlugin(cosched.Name, cosched.New),
+		app.WithPlugin(cosched.Name, cosched.New), // 加载自定义插件
 	)
 
 	logs.InitLogs()
