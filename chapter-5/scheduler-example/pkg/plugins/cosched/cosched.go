@@ -18,7 +18,7 @@ var (
 )
 
 type Plugin struct {
-	handle  framework.Handle
+	handle framework.Handle
 }
 
 func New(args runtime.Object, handle framework.Handle) (framework.Plugin, error) {
@@ -55,5 +55,3 @@ func (p *Plugin) Score(ctx context.Context, state *framework.CycleState, pod *co
 
 	return 0, nil
 }
-
-

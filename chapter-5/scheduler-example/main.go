@@ -5,9 +5,9 @@ import (
 	"k8s.io/component-base/logs"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 	"math/rand"
+	"os"
 	"scheduler-example/pkg/plugins/cosched"
 	"time"
-	"os"
 )
 
 func main() {
@@ -26,4 +26,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
