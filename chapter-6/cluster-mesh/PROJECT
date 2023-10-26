@@ -1,0 +1,15 @@
+domain: zhihu.com
+layout:
+- go.kubebuilder.io/v3
+projectName: cluster-mesh
+repo: zhihu.com/cluster-mesh
+resources:
+- api:
+    crdVersion: v1
+  controller: true
+  domain: zhihu.com
+  group: clusters
+  kind: Cluster
+  path: zhihu.com/cluster-mesh/api/v1
+  version: v1
+version: "3"
