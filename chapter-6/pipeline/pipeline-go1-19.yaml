@@ -1,0 +1,92 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: task-go1-19
+spec:
+  params:
+    - name: image
+      description: image url
+      type: string
+  workspaces:
+    - name: config
+      description: configmap workspace
+  volumes:
+    - name: dockerpath
+      hostPath:
+        path: /var/run/docker.sock
+    - name: temp
+      hostPath:
+        path: /tmp
+  steps:
+    - name: go-build
+      image: golang:1.19.0
+      workingDir: /workspace/git-resource
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - -exu
+        - |
+      env:
+        - name: GOPROXY
+          value: "https://mirrors.aliyun.com/goproxy"
+        - name: GO111MODULE
+          value: "on"
+      volumeMounts:
+        - name: temp
+          mountPath: /tmp
+    - name: docker-build
+      image: docker:18.09.9
+      workingDir: /workspace
+      command:
+        - /bin/sh
+      args:
+        - -c
+        - -exu
+        - |
+          pwd
+          image=$(params.image)
+          docker build -t $image -f $(workspaces.config.path)/Dockerfile  ./
+          docker push $image
+          docker rmi $image
+      volumeMounts:
+        - name: dockerpath
+          mountPath: /var/run/docker.sock
+        - name: temp
+          mountPath: /workspace
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: pipeline-go1-19
+spec:
+  params:
+    - name: image-registry
+      default: gcr.io/christiewilson-catfactory
+  workspaces:
+    - name: config
+  tasks:
+    - name: build-image
+      taskRef:
+        name: task-go1-19
+      params:
+        - name: image
+          value: image.zhihu.com/base/golang:go1.19
+      workspaces:
+        - name: config
+          workspace: config
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: pipeline-run-go1-19
+spec:
+  pipelineRef:
+    name: pipeline-go1-19
+  taskRunTemplate:
+    serviceAccountName: 'default'
+  workspaces:
+    - name: config
+      configMap:
+        name: pipeline-go1-19
+
