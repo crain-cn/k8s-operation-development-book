@@ -3,57 +3,69 @@ kind: EventListener
 metadata:
   name: gitlab-listener
 spec:
-  serviceAccountName: tekton-triggers-example-sa
-  triggers:
+  serviceAccountName: tekton-triggers-sa
+  triggers:   # 触发器列表
     - name: gitlab-push-events-trigger
-      interceptors:
+      interceptors:  # 拦截器
         - name: "verify-gitlab-payload"
-          ref:
+          ref:  # 关联的ClusterInterceptor资源
             name: "gitlab"
             kind: ClusterInterceptor
           params:
             - name: secretRef
               value:
-                secretName: "gitlab-secret"
+                secretName: "gitlab-secret" # k8s Secret
                 secretKey: "secretToken"
             - name: eventTypes
               value:
                 - "Push Hook"
-      bindings:
-        - name: gitrevision
+      bindings: #  绑定参数
+        - name: gitrevision             # git 版本
           value: $(body.checkout_sha)
-        - name: gitrepositoryurl
+        - name: gitrepositoryurl        # git url地址
           value: $(body.repository.git_http_url)
-      template:
+      template:  # 模版
         spec:
-          params:
+          params: # 传递的参数
             - name: gitrevision
             - name: gitrepositoryurl
-          resourcetemplates:
-            - apiVersion: tekton.dev/v1beta1
+          resourcetemplates: # Token resource资源，如下创建了一个TaskRun资源
+            - apiVersion: tekton.dev/v1
               kind: TaskRun
               metadata:
-                generateName: gitlab-run-
+                generateName: gitlab-run-   # 生成TaskRun对应Pod的前缀名称
               spec:
                 taskSpec:
                   steps:
-                    - image: ubuntu
-                      script: |
+                    - image: ubuntu         # TaskRun生成Pod的镜像
+                      script: |             # 执行的脚本，比较简单，就是输出gitrevision与gitrepositoryurl参数
                         #! /bin/bash
                         echo "Revision is : $(tt.params.gitrevision). RepoURL is $(tt.params.gitrepositoryurl)"
+---
+#  Gitlab Webhook Secret token
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-secret
+type: Opaque
+stringData:
+  secretToken: "1234567" #  Gitlab Webhook Secret token 一样要一样
+
+
+# 以下都是RABC权限相关
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: tekton-triggers-example-sa
+  name: tekton-triggers-sa
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: triggers-example-eventlistener-binding
+  name: triggers-eventlistener-binding
 subjects:
   - kind: ServiceAccount
-    name: tekton-triggers-example-sa
+    name: tekton-triggers-sa
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -62,10 +74,10 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: triggers-example-eventlistener-clusterbinding
+  name: triggers-eventlistener-clusterbinding
 subjects:
   - kind: ServiceAccount
-    name: tekton-triggers-example-sa
+    name: tekton-triggers-sa
     namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
