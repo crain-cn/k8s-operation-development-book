@@ -40,7 +40,7 @@ spec:
     - name: docker-build                  # 执行步骤名称
       image: docker:18.09.9               # 执行时容器镜像
       workingDir: /workspace              # 工作目录
-      command:                            # 执行内容，这里主要做 docker build, 编译的地址是通过$image传递，这样
+      command:                            # 执行内容，这里主要做 docker build, 编译的地址是通过$image传递
         - /bin/sh
       args:
         - -c
@@ -85,7 +85,7 @@ spec:
   pipelineRef:      # 关联Pipeline
     name: pipeline-go1-19
   workspaces:
-    - name: config  # 获取configmap模版
+    - name: config  # 绑定configmap模版
       configMap:
         name: pipeline-go1-19
 
