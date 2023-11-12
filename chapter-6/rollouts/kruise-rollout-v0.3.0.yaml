@@ -1,0 +1,1476 @@
+---
+# Source: kruise-rollout/templates/manager.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: kruise-rollout-controller-manager
+  name: kruise-rollout
+---
+# Source: kruise-rollout/templates/rbac_role.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kruise-rollout-controller-manager
+  namespace: kruise-rollout
+---
+# Source: kruise-rollout/templates/rollouts.kruise.io_batchreleases.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: batchreleases.rollouts.kruise.io
+spec:
+  group: rollouts.kruise.io
+  names:
+    kind: BatchRelease
+    listKind: BatchReleaseList
+    plural: batchreleases
+    singular: batchrelease
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.targetReference.workloadRef.kind
+      name: KIND
+      type: string
+    - jsonPath: .status.phase
+      name: PHASE
+      type: string
+    - jsonPath: .status.canaryStatus.currentBatch
+      name: BATCH
+      type: integer
+    - jsonPath: .status.canaryStatus.batchState
+      name: BATCH-STATE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BatchReleaseSpec defines how to describe an update between
+              different compRevision
+            properties:
+              releasePlan:
+                description: ReleasePlan is the details on how to rollout the resources
+                properties:
+                  batchPartition:
+                    description: All pods in the batches up to the batchPartition
+                      (included) will have the target resource specification while
+                      the rest still is the stable revision. This is designed for
+                      the operators to manually rollout. Default is nil, which means
+                      no partition and will release all batches. BatchPartition start
+                      from 0.
+                    format: int32
+                    type: integer
+                  batches:
+                    description: 'Batches is the details on each batch of the ReleasePlan.
+                      Users can specify their batch plan in this field, such as: batches:
+                      - canaryReplicas: 1  # batches 0 - canaryReplicas: 2  # batches
+                      1 - canaryReplicas: 5  # batches 2 Not that these canaryReplicas
+                      should be a non-decreasing sequence.'
+                    items:
+                      description: ReleaseBatch is used to describe how each batch
+                        release should be
+                      properties:
+                        canaryReplicas:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: 'CanaryReplicas is the number of upgraded pods
+                            that should have in this batch. it can be an absolute
+                            number (ex: 5) or a percentage of workload replicas. batches[i].canaryReplicas
+                            should less than or equal to batches[j].canaryReplicas
+                            if i < j.'
+                          x-kubernetes-int-or-string: true
+                      required:
+                      - canaryReplicas
+                      type: object
+                    type: array
+                  failureThreshold:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: FailureThreshold indicates how many failed pods can
+                      be tolerated in all upgraded pods. Only when FailureThreshold
+                      are satisfied, Rollout can enter ready state. If FailureThreshold
+                      is nil, Rollout will use the MaxUnavailable of workload as its
+                      FailureThreshold. Defaults to nil.
+                    x-kubernetes-int-or-string: true
+                  finalizingPolicy:
+                    description: FinalizingPolicy define the behavior of controller
+                      when phase enter Finalizing Defaults to "Immediate"
+                    type: string
+                  rolloutID:
+                    description: RolloutID indicates an id for each rollout progress
+                    type: string
+                type: object
+              targetReference:
+                description: TargetRef contains the GVK and name of the workload that
+                  we need to upgrade to.
+                properties:
+                  workloadRef:
+                    description: WorkloadRef contains enough information to let you
+                      identify a workload for Rollout Batch release of the bypass
+                    properties:
+                      apiVersion:
+                        description: API Version of the referent
+                        type: string
+                      kind:
+                        description: Kind of the referent
+                        type: string
+                      name:
+                        description: Name of the referent
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    type: object
+                type: object
+            required:
+            - releasePlan
+            - targetReference
+            type: object
+          status:
+            description: BatchReleaseStatus defines the observed state of a release
+              plan
+            properties:
+              canaryStatus:
+                description: CanaryStatus describes the state of the canary rollout.
+                properties:
+                  batchReadyTime:
+                    description: BatchReadyTime is the ready timestamp of the current
+                      batch or the last batch. This field is updated once a batch
+                      ready, and the batches[x].pausedSeconds relies on this field
+                      to calculate the real-time duration.
+                    format: date-time
+                    type: string
+                  batchState:
+                    description: CurrentBatchState indicates the release state of
+                      the current batch.
+                    type: string
+                  currentBatch:
+                    description: The current batch the rollout is working on/blocked,
+                      it starts from 0
+                    format: int32
+                    type: integer
+                  noNeedUpdateReplicas:
+                    description: the number of pods that no need to rollback in rollback
+                      scene.
+                    format: int32
+                    type: integer
+                  updatedReadyReplicas:
+                    description: UpdatedReadyReplicas is the number upgraded Pods
+                      that have a Ready Condition.
+                    format: int32
+                    type: integer
+                  updatedReplicas:
+                    description: UpdatedReplicas is the number of upgraded Pods.
+                    format: int32
+                    type: integer
+                required:
+                - currentBatch
+                type: object
+              collisionCount:
+                description: Count of hash collisions for creating canary Deployment.
+                  The controller uses this field as a collision avoidance mechanism
+                  when it needs to create the name for the newest canary Deployment.
+                format: int32
+                type: integer
+              conditions:
+                description: Conditions represents the observed process state of each
+                  phase during executing the release plan.
+                items:
+                  description: RolloutCondition describes the state of a rollout at
+                    a certain point.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Phase of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of rollout condition.
+                      type: string
+                  required:
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  for this BatchRelease. It corresponds to this BatchRelease's generation,
+                  which is updated on mutation by the API Server, and only if BatchRelease
+                  Spec was changed, its generation will increase 1.
+                format: int64
+                type: integer
+              observedReleasePlanHash:
+                description: ObservedReleasePlanHash is a hash code of observed itself
+                  spec.releasePlan.
+                type: string
+              observedRolloutID:
+                description: ObservedRolloutID is the most recent rollout-id observed
+                  for this BatchRelease. If RolloutID was changed, we will restart
+                  to roll out from batch 0, to ensure the batch-id and rollout-id
+                  labels of Pods are correct.
+                type: string
+              observedWorkloadReplicas:
+                description: ObservedWorkloadReplicas is observed replicas of target
+                  referenced workload. This field is designed to deal with scaling
+                  event during rollout, if this field changed, it means that the workload
+                  is scaling during rollout.
+                format: int32
+                type: integer
+              phase:
+                description: Phase is the release plan phase, which indicates the
+                  current state of release plan state machine in BatchRelease controller.
+                type: string
+              stableRevision:
+                description: StableRevision is the pod-template-hash of stable revision
+                  pod template.
+                type: string
+              updateRevision:
+                description: UpdateRevision is the pod-template-hash of update revision
+                  pod template.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+# Source: kruise-rollout/templates/rollouts.kruise.io_rollouthistories.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: rollouthistories.rollouts.kruise.io
+spec:
+  group: rollouts.kruise.io
+  names:
+    kind: RolloutHistory
+    listKind: RolloutHistoryList
+    plural: rollouthistories
+    singular: rollouthistory
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: RolloutHistory is the Schema for the rollouthistories API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RolloutHistorySpec defines the desired state of RolloutHistory
+            properties:
+              rollout:
+                description: Rollout indicates information of the rollout related
+                  with rollouthistory
+                properties:
+                  data:
+                    description: Data indecates the spec of object ref
+                    x-kubernetes-preserve-unknown-fields: true
+                  name:
+                    description: Name indicates the name of object ref, such as rollout
+                      name, workload name, ingress name, etc.
+                    type: string
+                  rolloutID:
+                    description: RolloutID indicates the new rollout if there is no
+                      new RolloutID this time, ignore it and not execute RolloutHistory
+                    type: string
+                required:
+                - name
+                - rolloutID
+                type: object
+              service:
+                description: Service indicates information of the service related
+                  with workload
+                properties:
+                  data:
+                    description: Data indecates the spec of object ref
+                    x-kubernetes-preserve-unknown-fields: true
+                  name:
+                    description: Name indicates the name of object ref, such as rollout
+                      name, workload name, ingress name, etc.
+                    type: string
+                required:
+                - name
+                type: object
+              trafficRouting:
+                description: TrafficRouting indicates information of traffic route
+                  related with workload
+                properties:
+                  httpRoute:
+                    description: HTTPRouteRef indacates information of Gateway API
+                    properties:
+                      data:
+                        description: Data indecates the spec of object ref
+                        x-kubernetes-preserve-unknown-fields: true
+                      name:
+                        description: Name indicates the name of object ref, such as
+                          rollout name, workload name, ingress name, etc.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  ingress:
+                    description: IngressRef indicates information of ingress
+                    properties:
+                      data:
+                        description: Data indecates the spec of object ref
+                        x-kubernetes-preserve-unknown-fields: true
+                      name:
+                        description: Name indicates the name of object ref, such as
+                          rollout name, workload name, ingress name, etc.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+              workload:
+                description: Workload indicates information of the workload, such
+                  as cloneset, deployment, advanced statefulset
+                properties:
+                  apiVersion:
+                    description: 'APIVersion defines the versioned schema of this
+                      representation of an object. Servers should convert recognized
+                      schemas to the latest internal value, and may reject unrecognized
+                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                    type: string
+                  data:
+                    description: Data indecates the spec of object ref
+                    x-kubernetes-preserve-unknown-fields: true
+                  kind:
+                    description: 'Kind is a string value representing the REST resource
+                      this object represents. Servers may infer this from the endpoint
+                      the client submits requests to. Cannot be updated. In CamelCase.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: Name indicates the name of object ref, such as rollout
+                      name, workload name, ingress name, etc.
+                    type: string
+                required:
+                - name
+                type: object
+            type: object
+          status:
+            description: RolloutHistoryStatus defines the observed state of RolloutHistory
+            properties:
+              canarySteps:
+                description: CanarySteps indicates the pods released each step
+                items:
+                  description: CanaryStepInfo indicates the pods for a revision
+                  properties:
+                    canaryStepIndex:
+                      description: CanaryStepIndex indicates step this revision
+                      format: int32
+                      type: integer
+                    pods:
+                      description: Pods indicates the pods information
+                      items:
+                        description: Pod indicates the information of a pod, including
+                          name, ip, node_name.
+                        properties:
+                          ip:
+                            description: IP indicates the pod ip
+                            type: string
+                          name:
+                            description: Name indicates the node name
+                            type: string
+                          nodeName:
+                            description: NodeName indicates the node which pod is
+                              located at
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: array
+              phase:
+                description: Phase indicates phase of RolloutHistory, just "" or "completed"
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+# Source: kruise-rollout/templates/rollouts.kruise.io_rollouts.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: rollouts.rollouts.kruise.io
+spec:
+  group: rollouts.kruise.io
+  names:
+    kind: Rollout
+    listKind: RolloutList
+    plural: rollouts
+    singular: rollout
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The rollout status phase
+      jsonPath: .status.phase
+      name: STATUS
+      type: string
+    - description: The rollout canary status step
+      jsonPath: .status.canaryStatus.currentStepIndex
+      name: CANARY_STEP
+      type: integer
+    - description: The rollout canary status step state
+      jsonPath: .status.canaryStatus.currentStepState
+      name: CANARY_STATE
+      type: string
+    - description: The rollout canary status message
+      jsonPath: .status.message
+      name: MESSAGE
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Rollout is the Schema for the rollouts API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RolloutSpec defines the desired state of Rollout
+            properties:
+              objectRef:
+                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                  ObjectRef indicates workload'
+                properties:
+                  workloadRef:
+                    description: WorkloadRef contains enough information to let you
+                      identify a workload for Rollout Batch release of the bypass
+                    properties:
+                      apiVersion:
+                        description: API Version of the referent
+                        type: string
+                      kind:
+                        description: Kind of the referent
+                        type: string
+                      name:
+                        description: Name of the referent
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    type: object
+                type: object
+              rolloutID:
+                description: DeprecatedRolloutID is the deprecated field. It is recommended
+                  that configure RolloutId in workload.annotations[rollouts.kruise.io/rollout-id].
+                  RolloutID should be changed before each workload revision publication.
+                  It is to distinguish consecutive multiple workload publications
+                  and rollout progress.
+                type: string
+              strategy:
+                description: rollout strategy
+                properties:
+                  canary:
+                    description: CanaryStrategy defines parameters for a Replica Based
+                      Canary
+                    properties:
+                      failureThreshold:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: FailureThreshold indicates how many failed pods
+                          can be tolerated in all upgraded pods. Only when FailureThreshold
+                          are satisfied, Rollout can enter ready state. If FailureThreshold
+                          is nil, Rollout will use the MaxUnavailable of workload
+                          as its FailureThreshold. Defaults to nil.
+                        x-kubernetes-int-or-string: true
+                      steps:
+                        description: Steps define the order of phases to execute release
+                          in batches(20%, 40%, 60%, 80%, 100%)
+                        items:
+                          description: CanaryStep defines a step of a canary workload.
+                          properties:
+                            matches:
+                              description: Matches define conditions used for matching
+                                the incoming HTTP requests to canary service. Each
+                                match is independent, i.e. this rule will be matched
+                                if **any** one of the matches is satisfied. If Gateway
+                                API, current only support one match. And cannot support
+                                both weight and matches, if both are configured, then
+                                matches takes precedence.
+                              items:
+                                properties:
+                                  headers:
+                                    description: Headers specifies HTTP request header
+                                      matchers. Multiple match values are ANDed together,
+                                      meaning, a request must match all the specified
+                                      headers to select the route.
+                                    items:
+                                      description: HTTPHeaderMatch describes how to
+                                        select a HTTP route by matching HTTP request
+                                        headers.
+                                      properties:
+                                        name:
+                                          description: "Name is the name of the HTTP
+                                            Header to be matched. Name matching MUST
+                                            be case insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+                                            \n If multiple entries specify equivalent
+                                            header names, only the first entry with
+                                            an equivalent name MUST be considered
+                                            for a match. Subsequent entries with an
+                                            equivalent header name MUST be ignored.
+                                            Due to the case-insensitivity of header
+                                            names, \"foo\" and \"Foo\" are considered
+                                            equivalent. \n When a header is repeated
+                                            in an HTTP request, it is implementation-specific
+                                            behavior as to how this is represented.
+                                            Generally, proxies should follow the guidance
+                                            from the RFC: https://www.rfc-editor.org/rfc/rfc7230.html#section-3.2.2
+                                            regarding processing a repeated header,
+                                            with special handling for \"Set-Cookie\"."
+                                          maxLength: 256
+                                          minLength: 1
+                                          pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: "Type specifies how to match
+                                            against the value of the header. \n Support:
+                                            Core (Exact) \n Support: Custom (RegularExpression)
+                                            \n Since RegularExpression HeaderMatchType
+                                            has custom conformance, implementations
+                                            can support POSIX, PCRE or any other dialects
+                                            of regular expressions. Please read the
+                                            implementation's documentation to determine
+                                            the supported dialect."
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          type: string
+                                        value:
+                                          description: Value is the value of HTTP
+                                            Header to be matched.
+                                          maxLength: 4096
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - name
+                                      - value
+                                      type: object
+                                    maxItems: 16
+                                    type: array
+                                type: object
+                              type: array
+                            pause:
+                              description: Pause defines a pause stage for a rollout,
+                                manual or auto
+                              properties:
+                                duration:
+                                  description: Duration the amount of time to wait
+                                    before moving to the next step.
+                                  format: int32
+                                  type: integer
+                              type: object
+                            replicas:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: 'Replicas is the number of expected canary
+                                pods in this batch it can be an absolute number (ex:
+                                5) or a percentage of total pods.'
+                              x-kubernetes-int-or-string: true
+                            weight:
+                              description: Weight indicate how many percentage of
+                                traffic the canary pods should receive
+                              format: int32
+                              type: integer
+                          type: object
+                        type: array
+                      trafficRoutings:
+                        description: TrafficRoutings hosts all the supported service
+                          meshes supported to enable more fine-grained traffic routing
+                          todo current only support one TrafficRouting
+                        items:
+                          description: TrafficRouting hosts all the different configuration
+                            for supported service meshes to enable more fine-grained
+                            traffic routing
+                          properties:
+                            gateway:
+                              description: Gateway holds Gateway specific configuration
+                                to route traffic Gateway configuration only supports
+                                >= v0.4.0 (v1alpha2).
+                              properties:
+                                httpRouteName:
+                                  description: HTTPRouteName refers to the name of
+                                    an `HTTPRoute` resource in the same namespace
+                                    as the `Rollout`
+                                  type: string
+                              type: object
+                            gracePeriodSeconds:
+                              description: Optional duration in seconds the traffic
+                                provider(e.g. nginx ingress controller) consumes the
+                                service, ingress configuration changes gracefully.
+                              format: int32
+                              type: integer
+                            ingress:
+                              description: Ingress holds Ingress specific configuration
+                                to route traffic, e.g. Nginx, Alb.
+                              properties:
+                                classType:
+                                  description: ClassType refers to the type of `Ingress`.
+                                    current support nginx, aliyun-alb. default is
+                                    nginx.
+                                  type: string
+                                name:
+                                  description: Name refers to the name of an `Ingress`
+                                    resource in the same namespace as the `Rollout`
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            service:
+                              description: Service holds the name of a service which
+                                selects pods with stable version and don't select
+                                any pods with canary version.
+                              type: string
+                          required:
+                          - service
+                          type: object
+                        type: array
+                    type: object
+                  paused:
+                    description: Paused indicates that the Rollout is paused. Default
+                      value is false
+                    type: boolean
+                type: object
+            required:
+            - objectRef
+            - strategy
+            type: object
+          status:
+            description: RolloutStatus defines the observed state of Rollout
+            properties:
+              canaryStatus:
+                description: Canary describes the state of the canary rollout
+                properties:
+                  canaryReadyReplicas:
+                    description: CanaryReadyReplicas the numbers of ready canary revision
+                      pods
+                    format: int32
+                    type: integer
+                  canaryReplicas:
+                    description: CanaryReplicas the numbers of canary revision pods
+                    format: int32
+                    type: integer
+                  canaryRevision:
+                    description: CanaryRevision is calculated by rollout based on
+                      podTemplateHash, and the internal logic flow uses It may be
+                      different from rs podTemplateHash in different k8s versions,
+                      so it cannot be used as service selector label
+                    type: string
+                  currentStepIndex:
+                    description: CurrentStepIndex defines the current step of the
+                      rollout is on. If the current step index is null, the controller
+                      will execute the rollout.
+                    format: int32
+                    type: integer
+                  currentStepState:
+                    type: string
+                  lastUpdateTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  observedRolloutID:
+                    description: ObservedRolloutID will record the newest spec.RolloutID
+                      if status.canaryRevision equals to workload.updateRevision
+                    type: string
+                  observedWorkloadGeneration:
+                    description: observedWorkloadGeneration is the most recent generation
+                      observed for this Rollout ref workload generation.
+                    format: int64
+                    type: integer
+                  podTemplateHash:
+                    description: pod template hash is used as service selector label
+                    type: string
+                  rolloutHash:
+                    description: RolloutHash from rollout.spec object
+                    type: string
+                  stableRevision:
+                    description: StableRevision indicates the revision of stable pods
+                    type: string
+                required:
+                - canaryReadyReplicas
+                - canaryReplicas
+                - canaryRevision
+                - currentStepState
+                - podTemplateHash
+                type: object
+              conditions:
+                description: Conditions a list of conditions a rollout can have.
+                items:
+                  description: RolloutCondition describes the state of a rollout at
+                    a certain point.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Phase of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of rollout condition.
+                      type: string
+                  required:
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              message:
+                description: Message provides details on why the rollout is in its
+                  current phase
+                type: string
+              observedGeneration:
+                description: observedGeneration is the most recent generation observed
+                  for this Rollout.
+                format: int64
+                type: integer
+              phase:
+                description: BlueGreenStatus *BlueGreenStatus `json:"blueGreenStatus,omitempty"`
+                  Phase is the rollout phase.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+# Source: kruise-rollout/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kruise-rollout-manager-role
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - replicasets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - replicasets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - clonesets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - clonesets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps.kruise.io
+    resources:
+      - statefulsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - services/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - httproutes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - httproutes/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - batchreleases
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - batchreleases/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - rollouthistories
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - rollouthistories/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - rollouthistories/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - rollouts
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - rollouts/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - rollouts.kruise.io
+    resources:
+      - rollouts/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+# Source: kruise-rollout/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kruise-rollout-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kruise-rollout-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: kruise-rollout-controller-manager
+    namespace: kruise-rollout
+---
+# Source: kruise-rollout/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kruise-rollout-leader-election-role
+  namespace: kruise-rollout
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+---
+# Source: kruise-rollout/templates/rbac_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kruise-rollout-leader-election-rolebinding
+  namespace: kruise-rollout
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kruise-rollout-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: kruise-rollout-controller-manager
+    namespace: kruise-rollout
+---
+# Source: kruise-rollout/templates/manager.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kruise-rollout-webhook-service
+  namespace: kruise-rollout
+spec:
+  ports:
+    - port: 443
+      targetPort: 9876
+  selector:
+    control-plane: kruise-rollout-controller-manager
+---
+# Source: kruise-rollout/templates/manager.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kruise-rollout-controller-manager
+  namespace: kruise-rollout
+  labels:
+    control-plane: kruise-rollout-controller-manager
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      control-plane: kruise-rollout-controller-manager
+  minReadySeconds: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
+  template:
+    metadata:
+      labels:
+        control-plane: kruise-rollout-controller-manager
+    spec:
+      serviceAccountName: kruise-rollout-controller-manager
+      containers:
+        - name: kruise-rollout
+          args:
+            - --leader-elect
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=127.0.0.1:8080
+            - --v=4
+            - --feature-gates=AdvancedDeployment=true
+          command:
+            - /manager
+          image: "openkruise/kruise-rollout:v0.3.0"
+          imagePullPolicy: Always
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 9876
+              name: webhook-server
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: control-plane
+                      operator: In
+                      values:
+                        - kruise-rollout-controller-manager
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+---
+# Source: kruise-rollout/templates/webhookconfiguration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kruise-rollout-mutating-webhook-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: kruise-rollout-webhook-service
+        namespace: kruise-rollout
+        path: /mutate-unified-workload
+    failurePolicy: Fail
+    name: munifiedworload.kb.io
+    objectSelector:
+      matchExpressions:
+        - key: rollouts.kruise.io/workload-type
+          operator: Exists
+    rules:
+      - apiGroups:
+          - '*'
+        apiVersions:
+          - '*'
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - '*'
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: kruise-rollout-webhook-service
+        namespace: kruise-rollout
+        path: /mutate-apps-v1-deployment
+    failurePolicy: Fail
+    name: mdeployment.kb.io
+    objectSelector:
+      matchExpressions:
+        - key: control-plane
+          operator: NotIn
+          values:
+            - kruise-rollout-controller-manager
+    rules:
+      - apiGroups:
+          - apps
+        apiVersions:
+          - v1
+        operations:
+          - UPDATE
+        resources:
+          - deployments
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: kruise-rollout-webhook-service
+        namespace: kruise-rollout
+        path: /mutate-apps-kruise-io-v1alpha1-cloneset
+    failurePolicy: Fail
+    name: mcloneset.kb.io
+    rules:
+      - apiGroups:
+          - apps.kruise.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - UPDATE
+        resources:
+          - clonesets
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: kruise-rollout-webhook-service
+        namespace: kruise-rollout
+        path: /mutate-apps-v1-statefulset
+    failurePolicy: Fail
+    name: mstatefulset.kb.io
+    rules:
+      - apiGroups:
+          - apps
+        apiVersions:
+          - v1
+        operations:
+          - UPDATE
+        resources:
+          - statefulsets
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: kruise-rollout-webhook-service
+        namespace: kruise-rollout
+        path: /mutate-apps-kruise-io-statefulset
+    failurePolicy: Fail
+    name: madvancedstatefulset.kb.io
+    rules:
+      - apiGroups:
+          - apps.kruise.io
+        apiVersions:
+          - v1alpha1
+          - v1beta1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - statefulsets
+    sideEffects: None
+---
+# Source: kruise-rollout/templates/webhookconfiguration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: kruise-rollout-validating-webhook-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: kruise-rollout-webhook-service
+        namespace: kruise-rollout
+        path: /validate-rollouts-kruise-io-rollout
+    failurePolicy: Fail
+    name: vrollout.kb.io
+    rules:
+      - apiGroups:
+          - rollouts.kruise.io
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - rollouts
+    sideEffects: None
