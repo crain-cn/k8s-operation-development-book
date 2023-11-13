@@ -1,0 +1,21 @@
+{
+  "plugin": "journald",  //插件这里插件有filelog、journald、custom
+  "pluginConfig": {
+    "source": "kubelet"  //插件配置源组件
+  },
+  "logPath": "/var/log/journal", //日志路径
+  "lookback": "5m", //轮训周期
+  "bufferSize": 10,   //buffer大小
+  "source": "kubelet-monitor", //组件
+  "conditions": [], //条件
+  "rules": [ //规则
+    {
+      //类型，分为temporary（临时）和permanent（永久）
+      "type": "temporary",
+      //事件名
+      "reason": "OrphanedPod",
+      //检查规则，都是用正则
+      "pattern": "orphaned pod(.+)\\w{8}(-\\w{4}){3}-\\w{12}(.+)found.*"
+    }
+  ]
+}
