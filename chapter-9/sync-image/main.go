@@ -19,6 +19,7 @@ func main() {
 	destinationRepository := ""				    // 目标Repository信息
 	destinationTag := ""				 		// 目标tag信息
 
+
 	// 初始化源信息
 	source, err := NewRegistrySource(sourceRegistry, sourceRepository, sourceTag, username, password, false)
 	if err != nil {
