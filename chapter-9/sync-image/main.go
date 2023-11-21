@@ -8,16 +8,16 @@ import (
 
 func main() {
 
-	username := "zhihu-k8s" 		// 账号
-	password := "B!H2Sh7uilvaR7TZR" // 密码
+	username := "" 	// 账号
+	password := "" // 密码
 
-	sourceRegistry := "ccr-2a0qvg98-pub.cnc.bj.baidubce.com" // 源镜像地址
-	sourceRepository := "zhihu/k8s-iaas-api"				 // 源Repository信息
-	sourceTag := "v0.1.19-test"								 // 源tag信息
+	sourceRegistry := "" 						// 源镜像地址
+	sourceRepository := ""		 				// 源Repository信息
+	sourceTag := ""								// 源tag信息
 
-	destinationRegistry := "ccr-2a0qvg98-pub.cnc.bj.baidubce.com"  // 目标镜像地址
-	destinationRepository := "zhihu/k8s-iaas-api"				   // 目标Repository信息
-	destinationTag := "v0.1.19-test1"							   // 目标tag信息
+	destinationRegistry := ""  					// 目标镜像地址
+	destinationRepository := ""				    // 目标Repository信息
+	destinationTag := ""				 		// 目标tag信息
 
 	// 初始化源信息
 	source, err := NewRegistrySource(sourceRegistry, sourceRepository, sourceTag, username, password, false)
