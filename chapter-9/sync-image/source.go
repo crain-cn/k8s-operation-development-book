@@ -27,10 +27,6 @@ var (
 )
 
 func NewRegistrySource(registry, repository, tag, username, password string, insecure bool) (*RegistrySource, error) {
-	// 判断repository参数是否设置tag
-	if CheckIfIncludeTag(repository) {
-		return nil, fmt.Errorf("repository string should not include tag")
-	}
 
 	// 判断tag是否为空,如果非空则拼接tagWithColon参数
 	tagWithColon := ""
@@ -46,7 +42,7 @@ func NewRegistrySource(registry, repository, tag, username, password string, ins
 
 	var sysctx *types.SystemContext
 	if insecure {
-		// 使用http访问惊喜那个地址
+		// 使用http访问镜像那个地址
 		sysctx = &types.SystemContext{
 			DockerInsecureSkipTLSVerify: types.OptionalBoolTrue,
 		}
@@ -83,16 +79,7 @@ func NewRegistrySource(registry, repository, tag, username, password string, ins
 	}, nil
 }
 
-// 判断目标地址Blob是否存在
-func (i *RegistroyDestination) CheckBlobExist(blobInfo types.BlobInfo) (bool, error) {
-	exist, _, err := i.destination.TryReusingBlob(i.ctx, types.BlobInfo{
-		Digest: blobInfo.Digest,
-		Size:   blobInfo.Size,
-	}, NoCache, false)
-
-	return exist, err
-}
-
+// 通过manifest层数据获取blob列表信息
 func (i *RegistrySource) GetBlobInfos(manifestByte []byte, manifestType string) ([]types.BlobInfo, error) {
 	if i.source == nil {
 		return nil, fmt.Errorf("source 对象不能为空")
@@ -122,7 +109,7 @@ func (i *RegistrySource) GetBlobInfos(manifestByte []byte, manifestType string) 
 	return srcBlobs, nil
 }
 
-
+// 获取Blob信息
 func (i *RegistrySource) GetBlob(blobInfo types.BlobInfo) (io.ReadCloser, int64, error) {
 	return i.source.GetBlob(i.ctx, types.BlobInfo{Digest: blobInfo.Digest, Size: -1}, NoCache)
 }
@@ -131,15 +118,17 @@ func (i *RegistrySource) Close() error {
 	return i.source.Close()
 }
 
-
+// 获取源镜像Registry地址
 func (i *RegistrySource) GetRegistry() string {
 	return i.registry
 }
 
+// 获取源镜像Repository
 func (i *RegistrySource) GetRepository() string {
 	return i.repository
 }
 
+// 获取源镜像Tag
 func (i *RegistrySource) GetTag() string {
 	return i.tag
 }

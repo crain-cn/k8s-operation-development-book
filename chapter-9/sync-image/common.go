@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-// 判断是否增加tag
-func CheckIfIncludeTag(repository string) bool {
-	return strings.Contains(repository, ":")
-}
-
 // 解析Manifest数据
 func ManifestHandler(m []byte, t string, i *RegistrySource) ([]manifest.Manifest, error) {
 

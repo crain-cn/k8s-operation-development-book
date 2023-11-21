@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/containers/image/v5/docker"
 	"github.com/containers/image/v5/types"
 	"io"
@@ -21,10 +20,6 @@ type RegistroyDestination struct {
 }
 
 func NewRegistroyDestination(registry, repository, tag, username, password string, insecure bool) (*RegistroyDestination, error) {
-	// 判断repository参数是否设置tag
-	if CheckIfIncludeTag(repository) {
-		return nil, fmt.Errorf("repository string should not include tag")
-	}
 
 	// 判断tag是否为空,如果非空则拼接tagWithColon参数
 	tagWithColon := ""
@@ -75,6 +70,15 @@ func NewRegistroyDestination(registry, repository, tag, username, password strin
 	}, nil
 }
 
+// 判断目标地址Blob是否存在
+func (i *RegistroyDestination) CheckBlobExist(blobInfo types.BlobInfo) (bool, error) {
+	exist, _, err := i.destination.TryReusingBlob(i.ctx, types.BlobInfo{
+		Digest: blobInfo.Digest,
+		Size:   blobInfo.Size,
+	}, NoCache, false)
+
+	return exist, err
+}
 
 // push 镜像manifest数据
 func (i *RegistroyDestination) PushManifest(manifestByte []byte) error {
@@ -94,8 +98,6 @@ func (i *RegistroyDestination) PutABlob(blob io.ReadCloser, blobInfo types.BlobI
 
 	return err
 }
-
-
 
 // 获取目标镜像Registry地址
 func (i *RegistroyDestination) GetRegistry() string {
