@@ -1,0 +1,25 @@
+apiVersion: chaosblade.io/v1alpha1
+kind: ChaosBlade
+metadata:
+  name: delay-pod-network-by-nginx    # 名称
+spec:
+  experiments:
+    - scope: pod                      # 作用域，这里可以写 node、pod、container
+      target: network                 # 实验靶点，可以写 cpu、pod 等
+      action: delay                   # 具体行为， 这里可以写loss、dns、IO、fullload等
+      desc: "delay pod network by nginx"
+      matchers:                       # 匹配规则
+        - name: names                 # 匹配Pod名称
+          value:
+            - "nginx-chaos-demo-69dc59c78f-5s2mc"
+        - name: namespace             # 匹配Namespace
+          value:
+            - "default"
+        - name: local-port
+          value: ["80"]
+        - name: interface
+          value: ["eth0"]
+        - name: time
+          value: ["3000"]
+        - name: offset
+          value: ["1000"]
