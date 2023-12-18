@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: kube-system
+  labels:
+    k8s-app: filebeat
+data:
+  filebeat.yml: |-
+    http.enabled: true  #是否启动http协议
+    http.host: 0.0.0.0  #绑定http host
+    http.pprof.enabled: true  #是否开启pprof
+    logging.level: info       #日志级别
+    max_procs: 1              #设置CPU核心数
+    output.kafka:
+      compression: none #设置输出压缩编解码器，必须是 none、snappy、lz4 和 gzip
+      hosts: '${KAFKA_HOSTS}'    #kafka配置地址
+      max_message_bytes: 1000000 #最大消息数，大于max_message_bytes会被丢弃
+      partition.round_robin: {reachable_only: false}
+      #Broker 要求的 ACK 可靠性级别。 0=无响应，1=等待本地提交，-1=等待所有副本提交。默认值为 1。如果设置为 0，Kafka 不会返回 ACK。消息可能会因错误而默默丢失。
+     required_acks: 1
+      topic: demo-job    # topic信息
+      version: 0.10.0.0  # Filebeat 在连接时将请求的 Kafka 协议版本
+    processors:
+      - drop_fields:  #处理器指定如果某个特定条件已满足。条件是可选的，如果缺少， 指定的字段始终被删除。
+          fields: [offset, kubernetes, beat, host, source, input, prospector, stream, ecs, agent, file, container, docker]

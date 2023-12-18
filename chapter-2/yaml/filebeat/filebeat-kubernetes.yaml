@@ -140,6 +140,7 @@ data:
     cloud.id: ${ELASTIC_CLOUD_ID}
     cloud.auth: ${ELASTIC_CLOUD_AUTH}
 
+    # elasticsearch配置
     output.elasticsearch:
       hosts: ['${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}']
       username: ${ELASTICSEARCH_USERNAME}
@@ -172,14 +173,14 @@ spec:
           "-c", "/etc/filebeat.yml",
           "-e",
         ]
-        env:
-        - name: ELASTICSEARCH_HOST
+        env: # ELASTICSEARCH开头的环境变量都是Elasticsearch配置
+        - name: ELASTICSEARCH_HOST  # Elasticsearch地址
           value: elasticsearch
-        - name: ELASTICSEARCH_PORT
+        - name: ELASTICSEARCH_PORT  # Elasticsearch端口
           value: "9200"
-        - name: ELASTICSEARCH_USERNAME
+        - name: ELASTICSEARCH_USERNAME # Elasticsearch用户名
           value: elastic
-        - name: ELASTICSEARCH_PASSWORD
+        - name: ELASTICSEARCH_PASSWORD # Elasticsearch密码
           value: changeme
         - name: ELASTIC_CLOUD_ID
           value:
