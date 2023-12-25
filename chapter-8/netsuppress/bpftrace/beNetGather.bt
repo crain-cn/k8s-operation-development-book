@@ -1,0 +1,93 @@
+#!/usr/bin/env bpftrace
+
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+
+BEGIN
+{
+	@start = nsecs;
+	@start_monitor = nsecs;
+	@rate_online = (uint64)0;
+	@rate_offline = (uint64)0;
+	@online_bytes = (uint64)0;
+	@offline_bytes = (uint64)0;
+	@avg_cnt = (uint64)0;
+
+    // 监听的网卡
+	@net_dev = "ifb3";
+
+	@sample_interval = (uint64)500;
+	@monitor_interval = (uint64)500;
+
+}
+
+tracepoint:net:net_dev_start_xmit
+{
+	$skb = ((struct sk_buff *)args->skbaddr);
+
+	if (strncmp($skb->dev->name, @net_dev, 16) != 0) {
+
+	}
+	else {
+
+		$interval = (nsecs - @start)/1000000;
+
+		if ($interval >= @sample_interval) {
+			@rate_online = @online_bytes*(1000/$interval);
+			@rate_offline = @offline_bytes*(1000/$interval);
+
+			@avg_online = @avg_online + @rate_online;
+			@avg_offline = @avg_offline + @rate_offline;
+
+			@avg_cnt = @avg_cnt + 1;
+
+			/* 清空计数 */
+			@online_bytes = 0;
+			@offline_bytes = 0;
+			@start = nsecs;
+		}
+
+		$interval = (nsecs - @start_monitor)/1000000;
+
+		if ($interval >= @monitor_interval) {
+
+
+			printf("online/offline{%d}(ms): %u/%u(Bytes)\n",
+				$interval,
+				@avg_online/@avg_cnt,
+				@avg_offline/@avg_cnt);     // 打印时间，平均在线流量和离线流量
+
+			@avg_online = 0;
+			@avg_offline = 0;
+			@start_monitor = nsecs;
+			@avg_cnt = 0;
+		}
+
+		if ($skb->priority != 4294967295) {              // 4294967295 对应-1;
+			@online_bytes = @online_bytes + $skb->len;   // 统计在线流量
+		} else {
+			@offline_bytes = @offline_bytes + $skb->len; // 统计离线流量
+		}
+	}
+}
+
+END
+{
+	clear(@start);
+	clear(@start_monitor);
+	clear(@sample_interval);
+	clear(@monitor_interval);
+	clear(@online_bytes);
+	clear(@offline_bytes);
+	clear(@avg_online);
+	clear(@avg_offline);
+	clear(@rate_online);
+	clear(@rate_offline);
+	clear(@avg_cnt);
+	clear(@net_dev);
+}
+
+
+
+
+
